@@ -1,0 +1,29 @@
+[Unit]
+Description=manuEdge bedside telemetry agent
+Documentation=https://github.com/mtc8608/manuEdge
+After=network-online.target time-sync.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/opt/manuedge/.venv/bin/manuedge --config /etc/manuedge/agent.toml
+Restart=always
+RestartSec=3
+# Watchdog: systemd restarts the agent if it stops calling sd_notify(WATCHDOG=1).
+# (Enable once the agent sends periodic WATCHDOG=1 pings.)
+# WatchdogSec=30
+User=manuedge
+Group=manuedge
+# Harden a little; RAM buffer means almost nothing needs to be writable on disk.
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/etc/manuedge
+NoNewPrivileges=true
+# SPI/GPIO device access for the ADS1256 driver.
+SupplementaryGroups=spi gpio
+DeviceAllow=/dev/spidev0.0 rw
+DeviceAllow=/dev/gpiomem rw
+
+[Install]
+WantedBy=multi-user.target

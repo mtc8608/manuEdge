@@ -1,0 +1,43 @@
+# manuEdge per-device config.
+#
+# Copy to agent.toml and fill in. For first-boot provisioning, drop this file on
+# the SD card's FAT boot partition as /boot/firmware/agent.toml — firstboot.sh
+# copies it to /etc/manuedge/agent.toml. NEVER commit a filled-in copy (secrets).
+
+node_id = "bedside-01"            # unique per Pi
+
+[server]
+url = "https://manubeat.example.hospital"
+enrollment_token = "PASTE-ONE-TIME-TOKEN"
+verify_tls = true
+
+[uplink]
+batch_records = 200
+poll_interval_s = 1.0
+max_backoff_s = 30.0
+
+[heartbeat]
+interval_s = 15.0
+
+[buffer]
+backend = "memory"               # RAM-only for now; "sqlite_ssd" once the SSD is in
+max_records = 500000
+
+# --- drivers (one block per device; ADS1256 is the prototype) ---
+[[drivers]]
+name = "ads1256"
+spi_bus = 0
+spi_device = 0
+cs_pin = 22
+drdy_pin = 17
+rst_pin = 18
+loop_hz = 50                      # round-robin per-channel sample rate
+
+# channel → modality map. Bench sensors today; real modalities later, no code change.
+[[drivers.channels]]
+ain = 0
+modality = "bench_pot"           # AIN0 = onboard potentiometer
+
+[[drivers.channels]]
+ain = 1
+modality = "bench_ldr"           # AIN1 = onboard photoresistor
