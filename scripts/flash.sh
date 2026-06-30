@@ -81,7 +81,13 @@ echo "Network (Ethernet preferred; Wi-Fi is the fallback):"
 prompt WIFI_SSID    "Wi-Fi SSID (blank = Ethernet only)" "${WIFI_SSID:-}"
 if [ -n "$WIFI_SSID" ]; then
   prompt_secret WIFI_PSK "Wi-Fi passphrase"
-  prompt WIFI_COUNTRY "Wi-Fi country code" "${WIFI_COUNTRY:-GB}"
+  prompt WIFI_COUNTRY "Wi-Fi country code (2-letter ISO, e.g. GB/US/PT)" "${WIFI_COUNTRY:-GB}"
+  # Must be a 2-letter ISO code (e.g. GB), NOT a dialing code like +44 — an
+  # invalid regdomain blocks the radio and Wi-Fi never connects.
+  WIFI_COUNTRY=$(printf '%s' "$WIFI_COUNTRY" | tr '[:lower:]' '[:upper:]')
+  if ! printf '%s' "$WIFI_COUNTRY" | grep -qE '^[A-Z]{2}$'; then
+    die "invalid Wi-Fi country '$WIFI_COUNTRY' — use a 2-letter ISO code like GB"
+  fi
 fi
 echo "Login:"
 prompt USERNAME "admin username (SSH key only)" "${USERNAME:-manu}"

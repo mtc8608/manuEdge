@@ -44,10 +44,48 @@ PasswordAuthentication no
 PubkeyAuthentication yes
 SSHD
 
+# --- suppress Raspberry Pi OS's interactive first-boot account wizard ---
+# We've already created the admin user above, so the built-in userconfig prompt
+# (shown on the console) must be disabled or it hijacks first boot.
+systemctl disable userconfig.service 2>/dev/null || true
+rm -f /etc/systemd/system/multi-user.target.wants/userconfig.service 2>/dev/null || true
+rm -f /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
+# mark the rename/firstboot flow done so getty starts normally on tty1
+[ -e /usr/lib/userconf-pi/userconf ] && /usr/lib/userconf-pi/userconf "$FR_USERNAME" 2>/dev/null || true
+systemctl set-default multi-user.target 2>/dev/null || true
+
+# --- physical-console autologin (tty1) so you're never locked out for debugging ---
+# SSH stays key-only over the network; this only affects someone with a keyboard
+# physically attached. Remove for a hardened deployment.
+mkdir -p /etc/systemd/system/getty@tty1.service.d
+cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin $FR_USERNAME --noclear %I \$TERM
+EOF
+
 # --- Wi-Fi (optional). Ethernet preferred via negative autoconnect priority. ---
 if [ -n "$FR_WIFI_SSID" ]; then
+  # Wi-Fi is rfkill-soft-blocked until a regulatory country is set. Set it every
+  # way we can so association works on the next boot.
   raspi-config nonint do_wifi_country "$FR_WIFI_COUNTRY" 2>/dev/null || true
+  iw reg set "$FR_WIFI_COUNTRY" 2>/dev/null || true
+  echo "REGDOMAIN=$FR_WIFI_COUNTRY" > /etc/default/crda 2>/dev/null || true
   rfkill unblock wifi 2>/dev/null || true
+  rfkill unblock all 2>/dev/null || true
+  # Re-assert the regdomain + unblock on EVERY boot, before NetworkManager — the
+  # one-time settings above don't reliably persist across the first reboot.
+  cat > /etc/systemd/system/manuedge-wifi-reg.service <<UNIT
+[Unit]
+Description=Force Wi-Fi regulatory domain (manuEdge)
+Before=NetworkManager.service
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rfkill unblock wifi || true; iw reg set $FR_WIFI_COUNTRY || true'
+[Install]
+WantedBy=multi-user.target
+UNIT
+  systemctl enable manuedge-wifi-reg.service 2>/dev/null || true
   install -d -m700 /etc/NetworkManager/system-connections
   CONN="/etc/NetworkManager/system-connections/${FR_WIFI_SSID}.nmconnection"
   cat > "$CONN" <<EOF
@@ -84,6 +122,7 @@ cat > /usr/local/sbin/manuedge-bootstrap <<EOF
 exec >>/var/log/manuedge-bootstrap.log 2>&1
 echo "[bootstrap] starting"
 set -e
+export DEBIAN_FRONTEND=noninteractive
 # Raspberry Pi OS Lite has no git — install it before the clone.
 if ! command -v git >/dev/null 2>&1; then
   apt-get update -y
