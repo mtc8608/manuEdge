@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#
+# manuEdge orchestrator — the single self-contained entry point.
+#
+# Dev box (no hardware): brings up the mock server + agent together, like
+# `docker compose up`. Pi: fronts install / update / logs.
+#
+#   ./run dev            # mock server + synthetic agent, together (Ctrl-C stops both)
+#   ./run mock [port]    # just the mock ingest server
+#   ./run agent [cfg]    # just the agent (default: synthetic config)
+#   ./run test           # pytest
+#   ./run setup          # create venv + install deps (auto-run when needed)
+#   ./run clean          # remove venv + generated files
+#   ./run install        # PI: provision + install systemd service (sudo)
+#   ./run update         # PI: git pull + restart service (sudo)
+#   ./run logs           # PI: follow the service log
+#   ./run status         # PI: service status
+#
+set -euo pipefail
+
+# Unbuffered so mock + agent output streams live (esp. when piped/redirected).
+export PYTHONUNBUFFERED=1
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV="$ROOT/.venv"
+PY="$VENV/bin/python"
+MANUEDGE="$VENV/bin/manuedge"
+RUNDIR="$ROOT/.run"
+PORT="${MANUEDGE_PORT:-8999}"
+
+log() { printf '\033[1;36m[run]\033[0m %s\n' "$*"; }
+
+ensure_venv() {
+  if [ ! -x "$MANUEDGE" ]; then
+    log "creating venv + installing (first run)…"
+    python3 -m venv "$VENV"
+    "$VENV/bin/pip" install --upgrade pip >/dev/null
+    "$VENV/bin/pip" install -e "$ROOT[dev]"
+  fi
+}
+
+# Generate a dev agent config pointing at the chosen mock port.
+dev_config() {
+  mkdir -p "$RUNDIR"
+  sed "s#http://localhost:3000#http://localhost:$PORT#" \
+    "$ROOT/config/agent.synthetic.toml" > "$RUNDIR/agent.dev.toml"
+  echo "$RUNDIR/agent.dev.toml"
+}
+
+cmd_setup() { ensure_venv; log "ready."; }
+
+cmd_test() { ensure_venv; "$VENV/bin/pytest" -q; }
+
+cmd_mock() { ensure_venv; exec "$PY" scripts/mock_server.py "${1:-$PORT}"; }
+
+cmd_agent() {
+  ensure_venv
+  local cfg="${1:-$(dev_config)}"
+  exec "$MANUEDGE" -c "$cfg"
+}
+
+# The "docker compose up" equivalent: mock + agent, with clean teardown.
+cmd_dev() {
+  ensure_venv
+  local cfg; cfg="$(dev_config)"
+  log "starting mock server on :$PORT"
+  "$PY" scripts/mock_server.py "$PORT" &
+  local mock_pid=$!
+  # Stop the mock when the agent exits / Ctrl-C.
+  trap 'kill "$mock_pid" 2>/dev/null || true' EXIT INT TERM
+  sleep 1
+  log "starting synthetic agent → http://localhost:$PORT  (Ctrl-C to stop both)"
+  "$MANUEDGE" -c "$cfg" || true
+}
+
+cmd_clean() { rm -rf "$VENV" "$RUNDIR"; log "removed venv + .run"; }
+
+# --- Pi lifecycle (thin wrappers over scripts/) ---
+cmd_install() { sudo bash "$ROOT/scripts/firstboot.sh"; }
+cmd_update()  { sudo bash "$ROOT/scripts/deploy.sh"; }
+cmd_logs()    { journalctl -u manuedge -f; }
+cmd_status()  { systemctl --no-pager status manuedge; }
+
+usage() { sed -n '3,20p' "$ROOT/run"; }
+
+cd "$ROOT"
+case "${1:-dev}" in
+  dev)     cmd_dev ;;
+  mock)    cmd_mock "${2:-}" ;;
+  agent)   cmd_agent "${2:-}" ;;
+  test)    cmd_test ;;
+  setup)   cmd_setup ;;
+  clean)   cmd_clean ;;
+  install) cmd_install ;;
+  update)  cmd_update ;;
+  logs)    cmd_logs ;;
+  status)  cmd_status ;;
+  -h|--help|help) usage ;;
+  *) echo "unknown command: $1"; echo; usage; exit 1 ;;
+esac

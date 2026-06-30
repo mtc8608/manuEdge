@@ -16,3 +16,6 @@ venv/
 # Local device config (never commit per-device secrets)
 config/agent.toml
 *.local.toml
+
+# ./run generated files
+.run/

@@ -32,12 +32,31 @@ rows, and the server's archival step is nearly mechanical. See manuBeat
 | `contract/` | **vendored** wire schema (Segment/Event + `SCHEMA_VERSION`); source of truth is manuBeat. |
 | `main.py` | wires it together; sampler in a thread, uplink + heartbeat in asyncio; sd_notify. |
 
-## Quickstart (dev box, no hardware)
+## Quickstart — `./run` (the self-contained orchestrator)
+
+`./run` is to manuEdge what `./run` (docker compose) is to manuBeat — one entry
+point for the whole lifecycle. It builds its own venv on first use.
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e '.[dev]'
-pytest                       # sampler + buffer logic
+./run dev        # mock server + synthetic agent, together (Ctrl-C stops both)
+./run test       # pytest (sampler + buffer logic)
+./run mock 8999  # just the mock ingest server
+./run agent cfg  # just the agent with a given config
+./run clean      # remove venv + generated files
+```
+
+`./run dev` is the hardware-free end-to-end demo: a synthetic driver generates
+ECG/ABP waveforms that flow sampler → buffer → uplink → a mock manuBeat server,
+which prints every batch. Pull the mock down mid-run and watch the buffer backlog
+grow, then drain on reconnect — the store-and-forward demo.
+
+On the Pi, the same script fronts the service:
+
+```bash
+./run install    # provision + install the systemd service (sudo; Bookworm)
+./run update     # git pull + restart
+./run logs       # follow the service log
+./run status     # service status
 ```
 
 The package imports without `spidev`/`RPi.GPIO`; the ADS1256 driver only needs them
