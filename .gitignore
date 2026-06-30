@@ -19,3 +19,6 @@ config/agent.toml
 
 # ./run generated files
 .run/
+
+# Per-machine state for the discussion-mirror hook (the log itself IS committed)
+.claude/hooks/.last-mirrored
