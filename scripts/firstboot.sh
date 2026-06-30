@@ -60,4 +60,5 @@ install -m 644 "$INSTALL_DIR/systemd/manuedge.service" /etc/systemd/system/manue
 systemctl daemon-reload
 systemctl enable --now manuedge.service
 
+touch "$INSTALL_DIR/.installed"   # marks bootstrap one-shot complete
 echo "[manuEdge] done. Check status: systemctl status manuedge"

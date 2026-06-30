@@ -5,6 +5,7 @@
 # Dev box (no hardware): brings up the mock server + agent together, like
 # `docker compose up`. Pi: fronts install / update / logs.
 #
+#   ./run flash [--dry-run] # LAPTOP: write an SD card with everything baked in
 #   ./run dev            # mock server + synthetic agent, together (Ctrl-C stops both)
 #   ./run mock [port]    # just the mock ingest server
 #   ./run agent [cfg]    # just the agent (default: synthetic config)
@@ -81,10 +82,11 @@ cmd_update()  { sudo bash "$ROOT/scripts/deploy.sh"; }
 cmd_logs()    { journalctl -u manuedge -f; }
 cmd_status()  { systemctl --no-pager status manuedge; }
 
-usage() { sed -n '3,20p' "$ROOT/run"; }
+usage() { sed -n '3,21p' "$ROOT/run"; }
 
 cd "$ROOT"
 case "${1:-dev}" in
+  flash)   shift; exec bash "$ROOT/scripts/flash.sh" "$@" ;;
   dev)     cmd_dev ;;
   mock)    cmd_mock "${2:-}" ;;
   agent)   cmd_agent "${2:-}" ;;

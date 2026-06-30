@@ -62,29 +62,41 @@ On the Pi, the same script fronts the service:
 The package imports without `spidev`/`RPi.GPIO`; the ADS1256 driver only needs them
 at `start()`.
 
-## Provisioning a Pi from a blank SD
+## Provisioning a Pi from a blank SD — `./run flash`
 
-1. **Flash** Raspberry Pi OS **Lite 64-bit (Bookworm)** with Raspberry Pi Imager.
-   In Imager's customization: set hostname, **enable SSH with your key**, Wi-Fi/locale.
-2. **Drop config**: copy [`config/agent.example.toml`](config/agent.example.toml) to the
-   SD's boot partition as `agent.toml` (becomes `/boot/firmware/agent.toml`), fill in
-   `node_id`, server URL, and the one-time enrollment token. *This is the per-device step —
-   one image, one small file per Pi.*
-3. **Boot + provision**: SSH in and run the bootstrap once:
-   ```bash
-   sudo bash firstboot.sh   # enables SPI, SD-wear stopgaps, clones, venv, installs service
-   ```
-   (Later this becomes a first-boot oneshot / a pre-baked image.)
-4. The agent is now a systemd service:
-   ```bash
-   systemctl status manuedge
-   journalctl -u manuedge -f
-   ```
+One command bakes a ready-to-run card. Insert the SD card in your laptop, then:
+
+```bash
+./run flash            # interactive; --dry-run to preview, --refresh to re-pull the image
+```
+
+It will:
+1. download Raspberry Pi OS **Lite 64-bit (Bookworm)** (cached in `.run/images/`),
+2. prompt for the per-Pi specifics (**node_id/hostname, server URL, enrollment token,
+   Wi-Fi**) — shared answers are remembered in `.run/flash-profile.env` so repeat cards
+   only need node_id + token,
+3. confirm the target device (type `ERASE`) and write the image,
+4. inject everything onto the boot partition: your **SSH public key** (key-only login),
+   **Wi-Fi** (with Ethernet preferred when a cable is present), **SPI enabled**, hostname,
+   the per-device `agent.toml`, and a first-boot hook.
+
+Then: **card → Pi → power up.** First boot configures the OS + Wi-Fi and reboots; the
+second boot installs manuEdge over the network (`firstboot.sh`: SPI, SD-wear stopgaps,
+clone, venv, systemd service) and starts it. After that:
+
+```bash
+ssh <user>@<node_id>.local
+journalctl -u manuedge -f
+```
+
+> Secrets (enrollment token, Wi-Fi passphrase) are never written to the profile.
+> The first-boot scripting mirrors Raspberry Pi Imager's `firstrun.sh` mechanism;
+> validate it on your first real card and report anything that needs tuning.
 
 ## Updating an agent (git-pull + restart)
 
 ```bash
-sudo bash /opt/manuedge/scripts/deploy.sh
+./run update        # on the Pi — wraps git pull + systemctl restart
 ```
 
 ## Hardware notes (Pi 4 + Waveshare ADS1256)
