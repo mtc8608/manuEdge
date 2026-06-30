@@ -17,4 +17,8 @@ def build_driver(name: str, config: dict) -> Driver:
         from .ads1256 import ADS1256Driver
 
         return ADS1256Driver(config)
+    if name == "synthetic":
+        from .synthetic import SyntheticDriver
+
+        return SyntheticDriver(config)
     raise ValueError(f"unknown driver {name!r}")

@@ -40,6 +40,8 @@ class AgentConfig:
     uplink: UplinkConfig = field(default_factory=UplinkConfig)
     heartbeat: HeartbeatConfig = field(default_factory=HeartbeatConfig)
     buffer: dict = field(default_factory=lambda: {"backend": "memory"})
+    # segment assembler tuning: max_samples, max_seconds, gap_factor
+    sampler: dict = field(default_factory=dict)
     # drivers: list of {name, ...driver-specific...}
     drivers: list[dict] = field(default_factory=list)
 
@@ -61,5 +63,6 @@ class AgentConfig:
             uplink=uplink,
             heartbeat=heartbeat,
             buffer=raw.get("buffer", {"backend": "memory"}),
+            sampler=raw.get("sampler", {}),
             drivers=raw.get("drivers", []),
         )

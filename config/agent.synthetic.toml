@@ -1,0 +1,40 @@
+# Synthetic test config — no hardware. Run the agent against scripts/mock_server.py.
+#   python scripts/mock_server.py &
+#   manuedge -c config/agent.synthetic.toml -v
+
+node_id = "dev-synthetic"
+
+[server]
+url = "http://localhost:3000"
+verify_tls = false
+
+[uplink]
+batch_records = 100
+poll_interval_s = 1.0
+
+[heartbeat]
+interval_s = 5.0
+
+[buffer]
+backend = "memory"
+
+[sampler]
+max_samples = 1000
+max_seconds = 2.0      # close a segment every 2 s so you see ingest quickly
+gap_factor = 2.5
+
+[[drivers]]
+name = "synthetic"
+loop_hz = 50
+
+[[drivers.streams]]
+modality = "ecg"
+amplitude = 1.0
+offset = 0.0
+cycle_s = 0.8        # ~75 bpm
+
+[[drivers.streams]]
+modality = "abp"
+amplitude = 40.0
+offset = 90.0
+cycle_s = 0.8

@@ -56,7 +56,7 @@ async def amain(config_path: str | None) -> None:
     # P0/P1: a single driver. The loop is ready for more.
     driver_cfg = config.drivers[0]
     driver = build_driver(driver_cfg["name"], driver_cfg)
-    sampler = Sampler(driver, buffer)
+    sampler = Sampler(driver, buffer, **config.sampler)
     sampler.start()
     log.info("sampler started: %s", [s.stream_id for s in driver.describe()])
 
