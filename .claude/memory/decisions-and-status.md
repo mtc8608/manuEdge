@@ -38,7 +38,7 @@ episodic/annotations). See [hdf5-format.md](hdf5-format.md).
 - `./run flash --dry-run` verified (artifacts only). **NOT yet tested on a real card/boot.**
 
 ## Next steps
-1. Build the manuBeat **`telemetry` ingest endpoint** (`/api/telemetry/ingest` +
+1. Build the manuBeat **`telemetry` ingest endpoint** (`/api/bedside/ingest` +
    `/heartbeat`) matching `src/manuedge/contract/`, so the Pi has a real server. Until then
    the uplink retries forever (expected store-and-forward behavior); for a live test point
    `agent.toml` `server.url` at a laptop running `./run mock 8999` on the LAN.

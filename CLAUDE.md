@@ -37,7 +37,9 @@ server's archival step is nearly mechanical. Keep this mapping intact end to end
   copy** in [src/manuedge/contract/](src/manuedge/contract/) with a `SCHEMA_VERSION`
   the server's ingest endpoint validates. If you change `Segment`/`Event`/the modality
   registry, bump `SCHEMA_VERSION` and update manuBeat too.
-- The **server side** (Node ingest `/api/telemetry/ingest` + `/heartbeat`, registry
+- The **server side** lives in manuBeat's existing **`bedside` domain** (Node ingest
+  `/api/bedside/ingest` + `/api/bedside/heartbeat`, device-token auth, a WebSocket hub at
+  `/ws/bedside`, registry
   tables, HDF5 archiver in Python, live frontend) lives in **manuBeat**, not here.
   manuBeat sits at `../manuBeat`; its full architecture plan is at
   `../manuBeat/docs/telemetry-bedside-plan.md`.
@@ -109,7 +111,8 @@ Done: full agent skeleton (ADS1256 + synthetic drivers, sampler, RAM buffer, upl
 heartbeat, config), `./run` orchestrator, `./run flash` SD baker (dry-run verified;
 **not yet tested on real hardware/boot**), tests green.
 
-Next: (1) build the manuBeat `telemetry` ingest endpoint so the Pi has a real server;
+Next: (1) the manuBeat `bedside` ingest endpoint (`/api/bedside/ingest` + `/heartbeat`,
+device-token auth, WS live plot) is BUILT — validate end-to-end with a real Pi;
 (2) validate `./run flash` on a real card; (3) base64 float32 sample encoding for
 waveform-rate streams; (4) `sqlite_ssd` buffer when the USB SSD arrives.
 

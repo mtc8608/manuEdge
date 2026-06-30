@@ -24,7 +24,7 @@ class Uplink:
     def __init__(self, config: AgentConfig, buffer: Buffer):
         self.config = config
         self.buffer = buffer
-        self._endpoint = config.server.url.rstrip("/") + "/api/telemetry/ingest"
+        self._endpoint = config.server.url.rstrip("/") + "/api/bedside/ingest"
 
     async def run(self) -> None:
         backoff = self.config.uplink.poll_interval_s

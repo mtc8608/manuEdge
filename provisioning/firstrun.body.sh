@@ -84,6 +84,11 @@ cat > /usr/local/sbin/manuedge-bootstrap <<EOF
 exec >>/var/log/manuedge-bootstrap.log 2>&1
 echo "[bootstrap] starting"
 set -e
+# Raspberry Pi OS Lite has no git — install it before the clone.
+if ! command -v git >/dev/null 2>&1; then
+  apt-get update -y
+  apt-get install -y git
+fi
 if [ -d /opt/manuedge/.git ]; then
   git -C /opt/manuedge pull --ff-only || true
 else

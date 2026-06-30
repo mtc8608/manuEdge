@@ -6,7 +6,9 @@ type: project
 
 # Server side (lives in manuBeat, not manuEdge)
 
-The counterpart to this agent is a new **`telemetry` domain in manuBeat**
+The counterpart to this agent is the existing **`bedside` domain in manuBeat** (ingest +
+WebSocket live plot are now BUILT; endpoints `/api/bedside/ingest` + `/api/bedside/heartbeat`,
+WS hub `/ws/bedside`, device-token auth)
 (`init-scripts/02-init-telemetry.sql`, `routes/telemetry/`, `resolvers/telemetry/`,
 `python/api/domains/telemetry/`, PWA pages). Full plan:
 `../manuBeat/docs/telemetry-bedside-plan.md`.
@@ -17,7 +19,7 @@ server is a **registry + ingest + realtime fan-out**.
 Pieces to build (in manuBeat):
 - **Enrollment/registry API** — Pis register, get per-device credentials (token or mTLS,
   separate from human JWT/admin/user roles).
-- **Ingest service (Node)** — accepts batches at `/api/telemetry/ingest`, validates the
+- **Ingest service (Node)** — accepts batches at `/api/bedside/ingest`, validates the
   `SCHEMA_VERSION`, **dedupes on `(node_id, stream_id, seq)`** (idempotent backfill),
   persists. Per manuBeat's rule, **Python is computation-only, no DB writes** → ingest +
   persistence stay in **Node**.
@@ -29,7 +31,7 @@ Pieces to build (in manuBeat):
   `readings`, `node_heartbeats`, audit log (PHI).
 - **Realtime fan-out** — WS / GraphQL subscriptions (current `graphql-http` is
   request/response only; live view needs a WS transport).
-- **Frontend** — Fleet page (online/offline from heartbeat at `/api/telemetry/heartbeat`,
+- **Frontend** — Fleet page (online/offline from heartbeat at `/api/bedside/heartbeat`,
   bound patient/bed, last-sample-time) + live monitor reusing manuBeat's `plot`/`plotGrid`
   components + config UI + alerts.
 
@@ -39,5 +41,5 @@ sample rate), intended-use boundary (research/monitoring vs clinical → regulat
 topology (assume server on-prem in hospital for PHI).
 
 **This agent's contract to the server:** POST batches `{schema_version, node_id, records:[
-{type:"segment"|"event", …}]}` to `/api/telemetry/ingest`; POST health to
-`/api/telemetry/heartbeat`. See `src/manuedge/contract/records.py` for exact shapes.
+{type:"segment"|"event", …}]}` to `/api/bedside/ingest`; POST health to
+`/api/bedside/heartbeat`. See `src/manuedge/contract/records.py` for exact shapes.

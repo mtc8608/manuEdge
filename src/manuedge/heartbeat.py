@@ -44,7 +44,7 @@ class Heartbeat:
         self.config = config
         self.sampler = sampler
         self.buffer = buffer
-        self._endpoint = config.server.url.rstrip("/") + "/api/telemetry/heartbeat"
+        self._endpoint = config.server.url.rstrip("/") + "/api/bedside/heartbeat"
 
     def snapshot(self) -> dict:
         return {
