@@ -7,6 +7,8 @@ server. The server never reaches in.
 
 > First/prototype device: **Waveshare High-Precision AD HAT (ADS1256)** 24-bit SPI ADC.
 > The whole stack is built pluggably — more drivers (RS-232, LAN) drop in later.
+> A second ADC option, **ADS1263** (10-ch, 32-bit), is config-selectable for a
+> Pi 3B+ bench — see `docs/pi3-ads1263-migration-plan.md` (**not yet bench-validated**).
 
 ## Design in one paragraph
 
@@ -22,7 +24,7 @@ rows, and the server's archival step is nearly mechanical. See manuBeat
 
 | Module | Role |
 |---|---|
-| `drivers/` | one plugin per device; `ads1256.py` is the prototype. Common `Driver` interface. |
+| `drivers/` | one plugin per device; `ads1256.py` is the prototype, `ads1263.py` a second ADC option. Common `Driver` interface. |
 | `sampler.py` | assembles raw samples into segments; gap → new segment; size/age flush. |
 | `quality.py` | per-sample quality bitset (clip/saturation/dropout). |
 | `buffer/` | store-and-forward; `memory` (RAM-only) now, `sqlite_ssd` later. Swappable. |
@@ -59,8 +61,8 @@ On the Pi, the same script fronts the service:
 ./run status     # service status
 ```
 
-The package imports without `spidev`/`RPi.GPIO`; the ADS1256 driver only needs them
-at `start()`.
+The package imports without `spidev`/`RPi.GPIO`; the ADS1256/ADS1263 drivers only
+need them at `start()`.
 
 ## Provisioning a Pi from a blank SD — `./run flash`
 
@@ -73,8 +75,8 @@ One command bakes a ready-to-run card. Insert the SD card in your laptop, then:
 It will:
 1. download Raspberry Pi OS **Lite 64-bit (Bookworm)** (cached in `.run/images/`),
 2. prompt for the per-Pi specifics (**node_id/hostname, server URL, enrollment token,
-   Wi-Fi**) — shared answers are remembered in `.run/flash-profile.env` so repeat cards
-   only need node_id + token,
+   Pi model [pi3/pi4], ADC HAT [ads1256/ads1263], Wi-Fi**) — shared answers are
+   remembered in `.run/flash-profile.env` so repeat cards only need node_id + token,
 3. confirm the target device (type `ERASE`) and write the image,
 4. inject everything onto the boot partition: your **SSH public key** (key-only login),
    **Wi-Fi** (with Ethernet preferred when a cable is present), **SPI enabled**, hostname,
@@ -105,6 +107,14 @@ SPI mode 1, ~1 MHz. CS=GPIO22, DRDY=GPIO17, RST=GPIO18, on-board 2.5 V ref.
 Bench sensors: AIN0 = potentiometer, AIN1 = photoresistor. A real-time clock
 (DS3231/PCF8523) is recommended — trustworthy timestamps underpin the Index Table.
 Get writes off the SD (log2ram, noatime, swap off) and never lose power dirtily (UPS).
+
+**Pi 3B+ + ADS1263 (config-selectable, not yet bench-validated):** same physical HAT
+connector/pin defaults, 10 channels (AIN0-AIN9) instead of 8, 32-bit instead of
+24-bit, and a `gain` field in its `[[drivers]]` block. The Pi 3B+'s 1 GB RAM also
+needs a lower `buffer.max_records` than the Pi 4 default — set `pi_model = "pi3"`
+in `agent.toml` and the agent will warn if the buffer looks oversized for it. Run
+the bench validation checklist in `docs/pi3-ads1263-migration-plan.md` before
+trusting any reading from this HAT.
 
 ## License
 

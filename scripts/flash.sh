@@ -77,6 +77,15 @@ echo "Per-Pi settings:"
 prompt NODE_ID    "node_id / hostname"  "${NODE_ID:-bedside-01}"
 prompt SERVER_URL "manuBeat server URL" "${SERVER_URL:-https://manubeat.example.hospital}"
 prompt_secret TOKEN "enrollment token (per device)"
+echo "Hardware (see docs/pi3-ads1263-migration-plan.md for ADS1263 bench-validation status):"
+prompt PI_MODEL "Raspberry Pi model (pi3/pi4)" "${PI_MODEL:-pi4}"
+if [ "$PI_MODEL" != "pi3" ] && [ "$PI_MODEL" != "pi4" ]; then
+  die "invalid Pi model '$PI_MODEL' — must be pi3 or pi4"
+fi
+prompt ADC "ADC HAT (ads1256/ads1263)" "${ADC:-ads1256}"
+if [ "$ADC" != "ads1256" ] && [ "$ADC" != "ads1263" ]; then
+  die "invalid ADC '$ADC' — must be ads1256 or ads1263"
+fi
 echo "Network (Ethernet preferred; Wi-Fi is the fallback):"
 prompt WIFI_SSID    "Wi-Fi SSID (blank = Ethernet only)" "${WIFI_SSID:-}"
 if [ -n "$WIFI_SSID" ]; then
@@ -104,15 +113,47 @@ USERNAME=$(printf '%q' "$USERNAME")
 WIFI_SSID=$(printf '%q' "$WIFI_SSID")
 WIFI_COUNTRY=$(printf '%q' "${WIFI_COUNTRY:-GB}")
 REPO_URL=$(printf '%q' "$REPO_URL")
+PI_MODEL=$(printf '%q' "$PI_MODEL")
+ADC=$(printf '%q' "$ADC")
 EOF
 
 # ------------------------------------------------------------ build artifacts
 WORK="$RUNDIR/flash-build"
 rm -rf "$WORK"; mkdir -p "$WORK"
 
+# RAM-only buffer budget: 1 GB on a 3B+ vs 2-8 GB on a Pi 4 (see
+# docs/pi3-ads1263-migration-plan.md) — rough starting point, not a measured budget.
+case "$PI_MODEL" in
+  pi3) MAX_RECORDS=100000 ;;
+  *)   MAX_RECORDS=500000 ;;
+esac
+
+# ADC driver block — same physical connector/pins on both HATs (not bench-confirmed
+# for the ADS1263; see docs/pi3-ads1263-migration-plan.md before trusting readings).
+DRIVER_BLOCK=$(cat <<EOF
+[[drivers]]
+name = "$ADC"
+spi_bus = 0
+spi_device = 0
+cs_pin = 22
+drdy_pin = 17
+rst_pin = 18
+loop_hz = 50
+
+[[drivers.channels]]
+ain = 0
+modality = "bench_pot"
+
+[[drivers.channels]]
+ain = 1
+modality = "bench_ldr"
+EOF
+)
+
 # agent.toml (bench channels by default; remap later via the config agent)
 cat > "$WORK/agent.toml" <<EOF
 node_id = "$NODE_ID"
+pi_model = "$PI_MODEL"
 
 [server]
 url = "$SERVER_URL"
@@ -128,24 +169,9 @@ interval_s = 15.0
 
 [buffer]
 backend = "memory"
-max_records = 500000
+max_records = $MAX_RECORDS
 
-[[drivers]]
-name = "ads1256"
-spi_bus = 0
-spi_device = 0
-cs_pin = 22
-drdy_pin = 17
-rst_pin = 18
-loop_hz = 50
-
-[[drivers.channels]]
-ain = 0
-modality = "bench_pot"
-
-[[drivers.channels]]
-ain = 1
-modality = "bench_ldr"
+$DRIVER_BLOCK
 EOF
 
 # firstrun.sh = generated FR_* header + static body

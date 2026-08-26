@@ -5,6 +5,7 @@
 # copies it to /etc/manuedge/agent.toml. NEVER commit a filled-in copy (secrets).
 
 node_id = "bedside-01"            # unique per Pi
+pi_model = "pi4"                  # "pi3" | "pi4" — shapes the buffer.max_records budget below
 
 [server]
 url = "https://manubeat.example.hospital"
@@ -21,9 +22,11 @@ interval_s = 15.0
 
 [buffer]
 backend = "memory"               # RAM-only for now; "sqlite_ssd" once the SSD is in
-max_records = 500000
+max_records = 500000              # pi_model = "pi3" (1 GB RAM)? drop this well below 150000
 
-# --- drivers (one block per device; ADS1256 is the prototype) ---
+# --- drivers (one block per device; pick ONE of the two ADC blocks below) ---
+
+# Option A: Waveshare High-Precision AD HAT (ADS1256, 8-ch 24-bit).
 [[drivers]]
 name = "ads1256"
 spi_bus = 0
@@ -41,3 +44,24 @@ modality = "bench_pot"           # AIN0 = onboard potentiometer
 [[drivers.channels]]
 ain = 1
 modality = "bench_ldr"           # AIN1 = onboard photoresistor
+
+# Option B: Waveshare High-Precision AD HAT (ADS1263, 10-ch 32-bit). Comment out
+# Option A above and uncomment this block instead — NOT bench-validated yet, see
+# docs/pi3-ads1263-migration-plan.md.
+# [[drivers]]
+# name = "ads1263"
+# spi_bus = 0
+# spi_device = 0
+# cs_pin = 22
+# drdy_pin = 17
+# rst_pin = 18
+# loop_hz = 50
+# gain = 1                        # 1/2/4/8/16/32
+#
+# [[drivers.channels]]
+# ain = 0                         # AIN0-AIN9 available (vs AIN0-AIN7 on the ADS1256)
+# modality = "bench_pot"
+#
+# [[drivers.channels]]
+# ain = 1
+# modality = "bench_ldr"

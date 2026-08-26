@@ -31,6 +31,12 @@ episodic/annotations). See [hdf5-format.md](hdf5-format.md).
 - Agent skeleton: `ads1256` + `synthetic` drivers, `SegmentAssembler` (gap/size/age flush,
   seq, quality), RAM `MemoryBuffer`, HTTPS `Uplink` (idempotent, backoff), `Heartbeat`,
   config/config_agent, `main` (sampler thread + asyncio + sd_notify).
+- `ads1263` driver (10-ch, 32-bit; ADC1 only, ADC2 out of v1 scope) + `pi_model`
+  ("pi3"/"pi4") config field, both config-selected alongside `ads1256`/`pi4` so
+  existing setups keep working unchanged. `./run flash` prompts for both. Ported
+  from Waveshare's reference driver rather than hand-derived — **code only, not
+  bench-validated**; see docs/pi3-ads1263-migration-plan.md for the validation
+  checklist before trusting a reading from this HAT.
 - `./run` orchestrator (dev/test/mock/agent/flash/install/update/logs/status); builds its
   own venv.
 - `./run flash` SD baker + `provisioning/firstrun.body.sh` + `scripts/firstboot.sh`.

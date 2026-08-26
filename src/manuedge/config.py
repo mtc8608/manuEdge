@@ -13,6 +13,11 @@ from pathlib import Path
 
 DEFAULT_PATH = Path("/etc/manuedge/agent.toml")
 
+# Pi model shapes the RAM-only buffer budget (1 GB on a 3B+ vs 2-8 GB on a Pi 4)
+# — see docs/pi3-ads1263-migration-plan.md. Informational/local only, never sent
+# over the wire.
+KNOWN_PI_MODELS = {"pi3", "pi4"}
+
 
 @dataclass(slots=True)
 class ServerConfig:
@@ -36,6 +41,7 @@ class HeartbeatConfig:
 @dataclass(slots=True)
 class AgentConfig:
     node_id: str
+    pi_model: str = "pi4"          # "pi3" | "pi4" — which board this config targets
     server: ServerConfig = field(default_factory=ServerConfig)
     uplink: UplinkConfig = field(default_factory=UplinkConfig)
     heartbeat: HeartbeatConfig = field(default_factory=HeartbeatConfig)
@@ -59,6 +65,7 @@ class AgentConfig:
         heartbeat = HeartbeatConfig(**raw.get("heartbeat", {}))
         return cls(
             node_id=raw["node_id"],
+            pi_model=raw.get("pi_model", "pi4"),
             server=server,
             uplink=uplink,
             heartbeat=heartbeat,

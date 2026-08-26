@@ -48,7 +48,7 @@ server's archival step is nearly mechanical. Keep this mapping intact end to end
 
 | Module | Role |
 |---|---|
-| `drivers/` | one plugin per device; common `Driver` interface (`describe`/`start`/`read`/`stop`). `ads1256.py` (hardware), `synthetic.py` (test). Hardware imports are lazy so the package imports on a dev box. |
+| `drivers/` | one plugin per device; common `Driver` interface (`describe`/`start`/`read`/`stop`). `ads1256.py` (hardware, bench-confirmed), `ads1263.py` (hardware, second ADC option — config-selected, **not yet bench-validated**, see [docs/pi3-ads1263-migration-plan.md](docs/pi3-ads1263-migration-plan.md)), `synthetic.py` (test). Hardware imports are lazy so the package imports on a dev box. |
 | `sampler.py` | `SegmentAssembler` turns raw samples into segments: gap → new segment, size/age flush, per-stream `seq`, quality transitions. `Sampler` runs the driver in a thread, appends segments to the buffer. |
 | `quality.py` | per-sample quality bitset (clip/saturation/dropout). Mirrored into HDF5 `definitions`. |
 | `buffer/` | store-and-forward; `memory` (RAM-only, current default) — `sqlite_ssd` stubbed for the USB SSD later. Swappable via config. |
@@ -109,7 +109,9 @@ since 1/1/1990.
 
 Done: full agent skeleton (ADS1256 + synthetic drivers, sampler, RAM buffer, uplink,
 heartbeat, config), `./run` orchestrator, `./run flash` SD baker (dry-run verified;
-**not yet tested on real hardware/boot**), tests green.
+**not yet tested on real hardware/boot**), tests green. Also on the `playground`
+branch: `ads1263` driver + `pi_model`/ADC selection in `agent.toml` and `./run flash`
+(code-only, **not bench-validated** — see docs/pi3-ads1263-migration-plan.md).
 
 Next: (1) the manuBeat `bedside` ingest endpoint (`/api/bedside/ingest` + `/heartbeat`,
 device-token auth, WS live plot) is BUILT — validate end-to-end with a real Pi;

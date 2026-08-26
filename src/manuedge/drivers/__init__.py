@@ -1,7 +1,10 @@
 """Device drivers — one plugin per device type, common interface.
 
 The driver layer is the part that grows over time. ADS1256 (SPI ADC) is the
-first/prototype driver; RS-232 (pyserial) and LAN (TCP) drivers follow.
+first/prototype driver, ADS1263 is a second SPI ADC option (both HATs share
+the same config-selected `Driver` registry — see
+docs/pi3-ads1263-migration-plan.md); RS-232 (pyserial) and LAN (TCP) drivers
+follow.
 """
 
 from __future__ import annotations
@@ -17,6 +20,10 @@ def build_driver(name: str, config: dict) -> Driver:
         from .ads1256 import ADS1256Driver
 
         return ADS1256Driver(config)
+    if name == "ads1263":
+        from .ads1263 import ADS1263Driver
+
+        return ADS1263Driver(config)
     if name == "synthetic":
         from .synthetic import SyntheticDriver
 

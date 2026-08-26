@@ -19,7 +19,7 @@ import os
 import socket
 
 from .buffer import build_buffer
-from .config import AgentConfig
+from .config import KNOWN_PI_MODELS, AgentConfig
 from .config_agent import ConfigAgent
 from .drivers import build_driver
 from .heartbeat import Heartbeat
@@ -47,6 +47,20 @@ def _sd_notify(state: str) -> None:
 async def amain(config_path: str | None) -> None:
     config = AgentConfig.from_file(config_path)
     config = await ConfigAgent(config).pull()
+
+    if config.pi_model not in KNOWN_PI_MODELS:
+        log.warning(
+            "unrecognized pi_model %r (expected one of %s) — proceeding anyway",
+            config.pi_model, sorted(KNOWN_PI_MODELS),
+        )
+    # RAM-only buffer: a Pi 3B+ has only ~1 GB RAM vs 2-8 GB on a Pi 4 — flag an
+    # unrealistic ceiling now rather than let it OOM mid-shift.
+    max_records = config.buffer.get("max_records", 500_000)
+    if config.pi_model == "pi3" and max_records > 150_000:
+        log.warning(
+            "buffer.max_records=%d may be too high for a Pi 3B+'s 1 GB RAM; "
+            "consider lowering it in agent.toml", max_records,
+        )
 
     if not config.drivers:
         raise SystemExit("no drivers configured; add a [[drivers]] block to agent.toml")

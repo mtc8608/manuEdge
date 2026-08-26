@@ -41,3 +41,11 @@ before running the agent on hardware** (`./run flash` produces such a card).
 
 **Minimum viable bedside buy:** USB SSD + UPS (safe-shutdown) + official 5V/3A USB-C PSU
 + RTC module + isolated USB-RS232.
+
+**Second option, not yet bench-confirmed:** a Pi 3B+ (1 GB RAM) + Waveshare ADS1263 HAT
+(10-ch, 32-bit) is now config-selectable (`pi_model`/`[[drivers]] name = "ads1263"` in
+`agent.toml`) — the driver ports Waveshare's own reference sequence rather than a
+from-memory transcription, but none of the facts above (pins, chip-ID value, onboard
+sensor wiring, reference voltage) have been confirmed on real ADS1263 hardware the way
+they were for the ADS1256 above. Do not treat it as trustworthy until the checklist in
+`docs/pi3-ads1263-migration-plan.md` §3 has actually been run on the bench.
